@@ -78,7 +78,11 @@ export async function GET(_request: Request, { params }: Params) {
     }
   }
 
-  return NextResponse.json({ course: coursePayload, presentations: sortedPresentations });
+  return NextResponse.json({
+    course: coursePayload,
+    presentations: sortedPresentations,
+    viewerRole: session.user.role,
+  });
 }
 
 export async function PATCH(request: Request, { params }: Params) {

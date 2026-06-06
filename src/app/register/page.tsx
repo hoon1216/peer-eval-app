@@ -21,13 +21,27 @@ export default function RegisterPage() {
     setLoading(true);
     setError("");
 
-    const res = await fetch("/api/register", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
-    });
+    let res: Response;
+    try {
+      res = await fetch("/api/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+    } catch {
+      setLoading(false);
+      setError("서버에 연결할 수 없습니다. 인터넷 연결을 확인해주세요.");
+      return;
+    }
 
-    const data = await res.json();
+    let data: { error?: string } = {};
+    try {
+      data = (await res.json()) as { error?: string };
+    } catch {
+      setLoading(false);
+      setError("서버 응답을 읽을 수 없습니다. 잠시 후 다시 시도해주세요.");
+      return;
+    }
     setLoading(false);
 
     if (!res.ok) {

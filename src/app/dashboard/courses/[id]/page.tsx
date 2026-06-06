@@ -41,6 +41,7 @@ type CourseData = {
     professorName?: string;
   };
   presentations: Presentation[];
+  viewerRole?: string;
 };
 
 export default function EvaluationResultsPage() {
@@ -48,10 +49,17 @@ export default function EvaluationResultsPage() {
   const courseId = params.id as string;
   const { data: session } = useSession();
   const [data, setData] = useState<CourseData | null>(null);
+  const [loadError, setLoadError] = useState("");
 
   const load = useCallback(async () => {
+    setLoadError("");
     const res = await fetch(`/api/courses/${courseId}`);
-    if (res.ok) setData(await res.json());
+    if (res.ok) {
+      setData(await res.json());
+      return;
+    }
+    const body = (await res.json().catch(() => null)) as { error?: string } | null;
+    setLoadError(body?.error ?? "평가 정보를 불러오지 못했습니다.");
   }, [courseId]);
 
   useEffect(() => {
@@ -59,11 +67,19 @@ export default function EvaluationResultsPage() {
   }, [load]);
 
   if (!data) {
-    return <div className="mx-auto max-w-6xl px-4 py-10">불러오는 중...</div>;
+    return (
+      <div className="mx-auto max-w-6xl px-4 py-10">
+        {loadError ? (
+          <p className="text-red-600">{loadError}</p>
+        ) : (
+          "불러오는 중..."
+        )}
+      </div>
+    );
   }
 
   const { course, presentations } = data;
-  const role = session?.user?.role;
+  const role = data.viewerRole ?? session?.user?.role;
 
   if (isStudent(role ?? "")) {
     return (
