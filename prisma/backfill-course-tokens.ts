@@ -4,17 +4,18 @@ import { randomUUID } from "crypto";
 const prisma = new PrismaClient();
 
 async function main() {
-  const courses = await prisma.$queryRaw<{ id: string; accessToken: string | null }[]>`
-    SELECT id, accessToken FROM Course
-  `;
+  const courses = await prisma.course.findMany({
+    select: { id: true, accessToken: true },
+  });
 
   let updated = 0;
   for (const course of courses) {
     if (course.accessToken) continue;
     const token = randomUUID();
-    await prisma.$executeRaw`
-      UPDATE Course SET accessToken = ${token} WHERE id = ${course.id}
-    `;
+    await prisma.course.update({
+      where: { id: course.id },
+      data: { accessToken: token },
+    });
     updated += 1;
   }
 
