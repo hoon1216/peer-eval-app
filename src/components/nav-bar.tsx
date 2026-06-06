@@ -1,6 +1,6 @@
 "use client";
 
-import { ROLE_LABELS } from "@/lib/permissions";
+import { ROLE_LABELS } from "@/lib/role-permissions";
 import { pillButtonClass } from "@/lib/pill-button";
 import Link from "next/link";
 import { usePathname } from "next/navigation";

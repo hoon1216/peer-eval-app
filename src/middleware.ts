@@ -1,11 +1,14 @@
-import { auth } from "@/lib/auth";
+import { authConfig } from "@/auth.config";
 import {
   canManageCourse,
   canObserverEvaluate,
   canPeerEvaluate,
   isLeadProfessor,
-} from "@/lib/permissions";
+} from "@/lib/role-permissions";
+import NextAuth from "next-auth";
 import { NextResponse } from "next/server";
+
+const { auth } = NextAuth(authConfig);
 
 export default auth((req) => {
   if (!req.auth?.user) {
