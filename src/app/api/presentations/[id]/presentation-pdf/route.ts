@@ -2,10 +2,9 @@ import { auth } from "@/lib/auth";
 import { canAccessPresentation } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import {
-  presentationPdfAbsolutePath,
   presentationPdfFileExists,
+  readPresentationPdfBuffer,
 } from "@/lib/presentation-pdf-storage";
-import { readFile } from "fs/promises";
 import { NextResponse } from "next/server";
 
 type Params = { params: Promise<{ id: string }> };
@@ -35,17 +34,17 @@ export async function GET(_request: Request, { params }: Params) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const relative = presentation.presentationPdfPath;
-  if (!relative || !(await presentationPdfFileExists(relative))) {
+  const storedPath = presentation.presentationPdfPath;
+  if (!storedPath || !(await presentationPdfFileExists(storedPath))) {
     return NextResponse.json({ error: "첨부된 PDF가 없습니다." }, { status: 404 });
   }
 
-  const buffer = await readFile(presentationPdfAbsolutePath(relative));
+  const buffer = await readPresentationPdfBuffer(storedPath);
   const filename = encodeURIComponent(
     `${presentation.title ?? "발표"}_발표자료.pdf`
   );
 
-  return new NextResponse(buffer, {
+  return new NextResponse(new Uint8Array(buffer), {
     headers: {
       "Content-Type": "application/pdf",
       "Content-Disposition": `inline; filename*=UTF-8''${filename}`,

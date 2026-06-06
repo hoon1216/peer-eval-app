@@ -1,14 +1,43 @@
 import { auth } from "@/lib/auth";
+import { MAX_PDF_BYTES } from "@/lib/pdf-upload-limits";
 import { prisma } from "@/lib/prisma";
 import {
   deletePresentationPdf,
   savePresentationPdf,
+  storedPathFromBlobUrl,
+  validatePdfBlobUrl,
 } from "@/lib/presentation-pdf-storage";
 import { NextResponse } from "next/server";
 
 type Params = { params: Promise<{ id: string }> };
 
-const MAX_PDF_BYTES = 15 * 1024 * 1024;
+export const maxDuration = 60;
+
+async function assertStudentPresentation(id: string, userId: string) {
+  const presentation = await prisma.presentation.findUnique({
+    where: { id },
+    include: { course: true },
+  });
+
+  if (!presentation) {
+    return { error: NextResponse.json({ error: "Not found" }, { status: 404 }) };
+  }
+
+  if (presentation.presenterId !== userId) {
+    return { error: NextResponse.json({ error: "Forbidden" }, { status: 403 }) };
+  }
+
+  if (presentation.status === "CLOSED") {
+    return {
+      error: NextResponse.json(
+        { error: "마감된 발표는 수정할 수 없습니다." },
+        { status: 400 }
+      ),
+    };
+  }
+
+  return { presentation };
+}
 
 export async function POST(request: Request, { params }: Params) {
   const session = await auth();
@@ -17,28 +46,33 @@ export async function POST(request: Request, { params }: Params) {
   }
 
   const { id } = await params;
-  const presentation = await prisma.presentation.findUnique({
-    where: { id },
-    include: { course: true },
-  });
+  const access = await assertStudentPresentation(id, session.user.id);
+  if (access.error) return access.error;
+  const presentation = access.presentation!;
 
-  if (!presentation) {
-    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  const contentType = request.headers.get("content-type") ?? "";
+  let title = "";
+  let overview = "";
+  let removePdf = false;
+  let pdfBlobUrl: string | null = null;
+  let pdfFile: File | null = null;
+
+  if (contentType.includes("application/json")) {
+    const body = await request.json();
+    title = String(body.title ?? "").trim();
+    overview = String(body.overview ?? "").trim();
+    removePdf = body.removePdf === true;
+    pdfBlobUrl = body.pdfBlobUrl ? String(body.pdfBlobUrl) : null;
+  } else {
+    const formData = await request.formData();
+    title = String(formData.get("title") ?? "").trim();
+    overview = String(formData.get("overview") ?? "").trim();
+    removePdf = formData.get("removePdf") === "true";
+    const pdfEntry = formData.get("pdf");
+    if (pdfEntry && pdfEntry instanceof File && pdfEntry.size > 0) {
+      pdfFile = pdfEntry;
+    }
   }
-
-  if (presentation.presenterId !== session.user.id) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
-
-  if (presentation.status === "CLOSED") {
-    return NextResponse.json({ error: "마감된 발표는 수정할 수 없습니다." }, { status: 400 });
-  }
-
-  const formData = await request.formData();
-  const title = String(formData.get("title") ?? "").trim();
-  const overview = String(formData.get("overview") ?? "").trim();
-  const removePdf = formData.get("removePdf") === "true";
-  const pdfEntry = formData.get("pdf");
 
   if (!title || !overview) {
     return NextResponse.json(
@@ -54,20 +88,33 @@ export async function POST(request: Request, { params }: Params) {
     presentationPdfPath = null;
   }
 
-  if (pdfEntry && pdfEntry instanceof File && pdfEntry.size > 0) {
-    if (pdfEntry.type !== "application/pdf") {
+  if (pdfBlobUrl) {
+    if (!validatePdfBlobUrl(pdfBlobUrl)) {
+      return NextResponse.json(
+        { error: "유효하지 않은 PDF 업로드입니다." },
+        { status: 400 }
+      );
+    }
+    if (presentationPdfPath) {
+      await deletePresentationPdf(presentationPdfPath);
+    }
+    presentationPdfPath = storedPathFromBlobUrl(pdfBlobUrl);
+  } else if (pdfFile) {
+    if (pdfFile.type !== "application/pdf") {
       return NextResponse.json(
         { error: "발표 PDF는 PDF 파일만 첨부할 수 있습니다." },
         { status: 400 }
       );
     }
-    if (pdfEntry.size > MAX_PDF_BYTES) {
+    if (pdfFile.size > MAX_PDF_BYTES) {
       return NextResponse.json(
-        { error: "PDF 파일은 15MB 이하만 업로드할 수 있습니다." },
+        {
+          error: `PDF 파일은 ${Math.round(MAX_PDF_BYTES / (1024 * 1024))}MB 이하만 업로드할 수 있습니다.`,
+        },
         { status: 400 }
       );
     }
-    const buffer = Buffer.from(await pdfEntry.arrayBuffer());
+    const buffer = Buffer.from(await pdfFile.arrayBuffer());
     if (presentationPdfPath) {
       await deletePresentationPdf(presentationPdfPath);
     }

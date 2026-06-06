@@ -1,5 +1,7 @@
 "use client";
 
+import { parseJsonResponse } from "@/lib/parse-json-response";
+import { upload } from "@vercel/blob/client";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -13,17 +15,27 @@ type Presentation = {
   presenter: { name: string; studentId: string | null };
 };
 
+type UploadConfig = {
+  useBlobUpload: boolean;
+  maxPdfBytes: number;
+  maxPdfMb: number;
+  directUploadLimitBytes: number;
+  hint?: string;
+};
+
 export default function PrepPage() {
   const params = useParams();
   const router = useRouter();
   const id = params.id as string;
   const [presentation, setPresentation] = useState<Presentation | null>(null);
+  const [uploadConfig, setUploadConfig] = useState<UploadConfig | null>(null);
   const [title, setTitle] = useState("");
   const [overview, setOverview] = useState("");
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [removePdf, setRemovePdf] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
 
   const isEdit =
     Boolean(presentation?.title?.trim()) && Boolean(presentation?.overview?.trim());
@@ -36,35 +48,133 @@ export default function PrepPage() {
         setTitle(data.title ?? "");
         setOverview(data.overview ?? "");
       });
+
+    fetch(`/api/presentations/${id}/assignment/upload-config`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data) setUploadConfig(data);
+      });
   }, [id]);
+
+  function validatePdfFile(file: File | null) {
+    if (!file || !uploadConfig) return null;
+    if (file.type !== "application/pdf") {
+      return "발표 PDF는 PDF 파일만 첨부할 수 있습니다.";
+    }
+    if (file.size > uploadConfig.maxPdfBytes) {
+      return `PDF 파일은 ${uploadConfig.maxPdfMb}MB 이하만 업로드할 수 있습니다.`;
+    }
+    if (
+      !uploadConfig.useBlobUpload &&
+      file.size > uploadConfig.directUploadLimitBytes
+    ) {
+      return `이 파일(${formatMb(file.size)})은 서버 제한으로 첨부할 수 없습니다. Vercel Blob 설정이 필요합니다.`;
+    }
+    return null;
+  }
+
+  function formatMb(bytes: number) {
+    return `${(bytes / (1024 * 1024)).toFixed(1)}MB`;
+  }
+
+  async function saveAssignment(payload: {
+    title: string;
+    overview: string;
+    removePdf: boolean;
+    pdfBlobUrl?: string;
+    pdfFile?: File | null;
+  }) {
+    const useBlobForFile =
+      Boolean(payload.pdfFile) && Boolean(uploadConfig?.useBlobUpload);
+
+    let pdfBlobUrl = payload.pdfBlobUrl;
+
+    if (useBlobForFile && payload.pdfFile) {
+      setUploadProgress(0);
+      const blob = await upload(`presentations/${id}.pdf`, payload.pdfFile, {
+        access: "private",
+        handleUploadUrl: `/api/presentations/${id}/presentation-pdf/upload`,
+        contentType: "application/pdf",
+        multipart: payload.pdfFile.size > 5 * 1024 * 1024,
+        onUploadProgress: ({ percentage }) => {
+          setUploadProgress(Math.round(percentage));
+        },
+      });
+      pdfBlobUrl = blob.url;
+      setUploadProgress(null);
+    }
+
+    if (useBlobForFile || pdfBlobUrl) {
+      return fetch(`/api/presentations/${id}/assignment`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: payload.title,
+          overview: payload.overview,
+          removePdf: payload.removePdf,
+          pdfBlobUrl: pdfBlobUrl ?? undefined,
+        }),
+      });
+    }
+
+    const formData = new FormData();
+    formData.append("title", payload.title);
+    formData.append("overview", payload.overview);
+    if (payload.pdfFile) formData.append("pdf", payload.pdfFile);
+    if (payload.removePdf) formData.append("removePdf", "true");
+
+    return fetch(`/api/presentations/${id}/assignment`, {
+      method: "POST",
+      body: formData,
+    });
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     setError("");
+    setUploadProgress(null);
 
-    const formData = new FormData();
-    formData.append("title", title);
-    formData.append("overview", overview);
-    if (pdfFile) formData.append("pdf", pdfFile);
-    if (removePdf) formData.append("removePdf", "true");
-
-    const res = await fetch(`/api/presentations/${id}/assignment`, {
-      method: "POST",
-      body: formData,
-    });
-
-    const data = await res.json();
-    setLoading(false);
-
-    if (!res.ok) {
-      setError(data.error ?? "제출에 실패했습니다.");
+    const pdfError = validatePdfFile(pdfFile);
+    if (pdfError) {
+      setLoading(false);
+      setError(pdfError);
       return;
     }
 
-    if (!presentation) return;
-    router.push(`/dashboard/courses/${presentation.courseId}`);
-    router.refresh();
+    try {
+      const res = await saveAssignment({
+        title,
+        overview,
+        removePdf,
+        pdfFile,
+      });
+
+      const data = await parseJsonResponse<{ error?: string }>(res);
+      setLoading(false);
+      setUploadProgress(null);
+
+      if (!res.ok) {
+        if (res.status === 413) {
+          setError(
+            "파일이 너무 커서 업로드할 수 없습니다. PDF 용량을 줄이거나 관리자에게 문의하세요."
+          );
+          return;
+        }
+        setError(data?.error ?? "제출에 실패했습니다.");
+        return;
+      }
+
+      if (!presentation) return;
+      router.push(`/dashboard/courses/${presentation.courseId}`);
+      router.refresh();
+    } catch (err) {
+      setLoading(false);
+      setUploadProgress(null);
+      setError(
+        err instanceof Error ? err.message : "PDF 업로드 중 오류가 발생했습니다."
+      );
+    }
   }
 
   if (!presentation) {
@@ -90,6 +200,9 @@ export default function PrepPage() {
         제목과 개요는 필수입니다. 발표 PDF는 선택 사항이며, 없어도 과제 등록이
         완료됩니다.
       </p>
+      {uploadConfig?.hint && (
+        <p className="mt-1 text-xs text-zinc-500">{uploadConfig.hint}</p>
+      )}
 
       <form
         onSubmit={handleSubmit}
@@ -140,10 +253,19 @@ export default function PrepPage() {
             onChange={(e) => {
               const file = e.target.files?.[0] ?? null;
               setPdfFile(file);
-              if (file) setRemovePdf(false);
+              if (file) {
+                setRemovePdf(false);
+                const pdfError = validatePdfFile(file);
+                setError(pdfError ?? "");
+              }
             }}
             className="mt-2 block w-full text-sm text-zinc-700 file:mr-3 file:rounded-lg file:border-0 file:bg-zinc-100 file:px-3 file:py-2 file:text-sm file:font-medium hover:file:bg-zinc-200"
           />
+          {pdfFile && uploadConfig && (
+            <p className="mt-1 text-xs text-zinc-500">
+              선택한 파일: {pdfFile.name} ({formatMb(pdfFile.size)})
+            </p>
+          )}
           {showExistingPdf && (
             <label className="mt-2 flex items-center gap-2 text-sm text-zinc-600">
               <input
@@ -155,13 +277,24 @@ export default function PrepPage() {
             </label>
           )}
         </div>
+        {uploadProgress !== null && (
+          <p className="text-sm text-blue-700">
+            PDF 업로드 중… {uploadProgress}%
+          </p>
+        )}
         {error && <p className="text-sm text-red-600">{error}</p>}
         <button
           type="submit"
           disabled={loading || presentation.status === "CLOSED"}
           className="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
         >
-          {loading ? "저장 중..." : isEdit ? "과제 저장" : "과제 등록"}
+          {loading
+            ? uploadProgress !== null
+              ? `PDF 업로드 중 (${uploadProgress}%)`
+              : "저장 중..."
+            : isEdit
+              ? "과제 저장"
+              : "과제 등록"}
         </button>
       </form>
     </div>
