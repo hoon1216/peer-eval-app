@@ -10,11 +10,20 @@ export const authConfig = {
   session: { strategy: "jwt" },
   providers: [],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger, session }) {
       if (user) {
         token.id = user.id!;
         token.role = user.role;
         token.studentId = user.studentId;
+        token.email = user.email;
+      }
+      if (trigger === "update" && session?.user) {
+        if ("studentId" in session.user) {
+          token.studentId = session.user.studentId;
+        }
+        if ("email" in session.user) {
+          token.email = session.user.email;
+        }
       }
       return token;
     },
@@ -23,6 +32,9 @@ export const authConfig = {
         session.user.id = token.id as string;
         session.user.role = token.role as Role;
         session.user.studentId = token.studentId as string | null | undefined;
+        if (token.email !== undefined && token.email !== null) {
+          session.user.email = token.email;
+        }
       }
       return session;
     },

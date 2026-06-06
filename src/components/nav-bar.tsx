@@ -1,5 +1,6 @@
 "use client";
 
+import { ProfileModal } from "@/components/profile-modal";
 import { ROLE_LABELS } from "@/lib/role-permissions";
 import { pillButtonClass } from "@/lib/pill-button";
 import Link from "next/link";
@@ -11,6 +12,7 @@ export function NavBar() {
   const { data: session } = useSession();
   const pathname = usePathname();
   const [courseListHref, setCourseListHref] = useState("/dashboard");
+  const [profileOpen, setProfileOpen] = useState(false);
 
   const presentationMatch = pathname.match(
     /^\/presentations\/([^/]+)\/(evaluate|observer-evaluate|professor-evaluate|prep)/
@@ -47,10 +49,15 @@ export function NavBar() {
         <nav className="flex items-center gap-4 text-sm">
           {session?.user ? (
             <>
-              <span className="text-zinc-600">
+              <button
+                type="button"
+                onClick={() => setProfileOpen(true)}
+                className="text-zinc-600 underline-offset-2 hover:text-zinc-900 hover:underline"
+                title="개인정보 수정"
+              >
                 {session.user.name}
                 {` (${ROLE_LABELS[session.user.role]})`}
-              </span>
+              </button>
               {!onEvaluationListPage && (
                 <Link href={listHref} className={pillButtonClass}>
                   {listLabel}
@@ -67,6 +74,7 @@ export function NavBar() {
           ) : null}
         </nav>
       </div>
+      <ProfileModal open={profileOpen} onClose={() => setProfileOpen(false)} />
     </header>
   );
 }

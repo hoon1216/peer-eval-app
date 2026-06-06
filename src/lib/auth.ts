@@ -29,6 +29,7 @@ declare module "@auth/core/jwt" {
     id: string;
     role: Role;
     studentId?: string | null;
+    email?: string | null;
   }
 }
 
