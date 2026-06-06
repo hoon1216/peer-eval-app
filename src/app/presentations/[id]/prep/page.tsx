@@ -16,7 +16,8 @@ type Presentation = {
 };
 
 type UploadConfig = {
-  useBlobUpload: boolean;
+  useBlobStorage: boolean;
+  useBlobClientUpload: boolean;
   maxPdfBytes: number;
   maxPdfMb: number;
   directUploadLimitBytes: number;
@@ -65,10 +66,10 @@ export default function PrepPage() {
       return `PDF 파일은 ${uploadConfig.maxPdfMb}MB 이하만 업로드할 수 있습니다.`;
     }
     if (
-      !uploadConfig.useBlobUpload &&
-      file.size > uploadConfig.directUploadLimitBytes
+      file.size > uploadConfig.directUploadLimitBytes &&
+      !uploadConfig.useBlobClientUpload
     ) {
-      return `이 파일(${formatMb(file.size)})은 서버 제한으로 첨부할 수 없습니다. Vercel Blob 설정이 필요합니다.`;
+      return `${formatMb(file.size)} 파일은 4MB보다 큽니다. Vercel Storage에 BLOB_READ_WRITE_TOKEN을 추가해야 업로드할 수 있습니다.`;
     }
     return null;
   }
@@ -85,23 +86,28 @@ export default function PrepPage() {
     pdfFile?: File | null;
   }) {
     const useBlobForFile =
-      Boolean(payload.pdfFile) && Boolean(uploadConfig?.useBlobUpload);
+      Boolean(payload.pdfFile) &&
+      Boolean(uploadConfig?.useBlobClientUpload) &&
+      payload.pdfFile!.size > (uploadConfig?.directUploadLimitBytes ?? 0);
 
     let pdfBlobUrl = payload.pdfBlobUrl;
 
     if (useBlobForFile && payload.pdfFile) {
       setUploadProgress(0);
-      const blob = await upload(`presentations/${id}.pdf`, payload.pdfFile, {
-        access: "private",
-        handleUploadUrl: `/api/presentations/${id}/presentation-pdf/upload`,
-        contentType: "application/pdf",
-        multipart: payload.pdfFile.size > 5 * 1024 * 1024,
-        onUploadProgress: ({ percentage }) => {
-          setUploadProgress(Math.round(percentage));
-        },
-      });
-      pdfBlobUrl = blob.url;
-      setUploadProgress(null);
+      try {
+        const blob = await upload(`presentations/${id}.pdf`, payload.pdfFile, {
+          access: "private",
+          handleUploadUrl: `/api/presentations/${id}/presentation-pdf/upload`,
+          contentType: "application/pdf",
+          multipart: payload.pdfFile.size > 5 * 1024 * 1024,
+          onUploadProgress: ({ percentage }) => {
+            setUploadProgress(Math.round(percentage));
+          },
+        });
+        pdfBlobUrl = blob.url;
+      } finally {
+        setUploadProgress(null);
+      }
     }
 
     if (useBlobForFile || pdfBlobUrl) {

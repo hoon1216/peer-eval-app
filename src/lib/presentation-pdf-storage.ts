@@ -2,7 +2,7 @@ import {
   MAX_PDF_BYTES,
   useBlobPdfStorage,
 } from "@/lib/pdf-upload-limits";
-import { del, head } from "@vercel/blob";
+import { del, head, put } from "@vercel/blob";
 import { access, mkdir, readFile, unlink, writeFile } from "fs/promises";
 import path from "path";
 
@@ -41,11 +41,29 @@ export function validatePdfBlobUrl(url: string) {
 }
 
 export async function savePresentationPdf(presentationId: string, data: Buffer) {
+  if (useBlobPdfStorage()) {
+    return savePresentationPdfToBlob(presentationId, data);
+  }
+
   const relative = presentationPdfRelativePath(presentationId);
   const absolute = presentationPdfAbsolutePath(relative);
   await mkdir(path.dirname(absolute), { recursive: true });
   await writeFile(absolute, data);
   return relative;
+}
+
+export async function savePresentationPdfToBlob(
+  presentationId: string,
+  data: Buffer
+) {
+  const pathname = `presentations/${presentationId}.pdf`;
+  const blob = await put(pathname, data, {
+    access: "private",
+    contentType: "application/pdf",
+    allowOverwrite: true,
+    addRandomSuffix: false,
+  });
+  return storedPathFromBlobUrl(blob.url);
 }
 
 export async function deletePresentationPdf(relativePath: string | null) {

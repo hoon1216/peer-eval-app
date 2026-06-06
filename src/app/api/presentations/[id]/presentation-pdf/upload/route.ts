@@ -1,5 +1,9 @@
 import { auth } from "@/lib/auth";
-import { MAX_PDF_BYTES, useBlobPdfStorage } from "@/lib/pdf-upload-limits";
+import {
+  MAX_PDF_BYTES,
+  useBlobClientUpload,
+  useBlobPdfStorage,
+} from "@/lib/pdf-upload-limits";
 import { prisma } from "@/lib/prisma";
 import { handleUpload, type HandleUploadBody } from "@vercel/blob/client";
 import { NextResponse } from "next/server";
@@ -9,7 +13,17 @@ type Params = { params: Promise<{ id: string }> };
 export async function POST(request: Request, { params }: Params) {
   if (!useBlobPdfStorage()) {
     return NextResponse.json(
-      { error: "대용량 PDF 업로드가 설정되지 않았습니다." },
+      { error: "Blob Storage가 설정되지 않았습니다." },
+      { status: 503 }
+    );
+  }
+
+  if (!useBlobClientUpload()) {
+    return NextResponse.json(
+      {
+        error:
+          "4MB보다 큰 PDF 업로드에는 BLOB_READ_WRITE_TOKEN 환경 변수가 필요합니다. Vercel Storage에서 토큰을 추가한 뒤 Redeploy 해주세요.",
+      },
       { status: 503 }
     );
   }
