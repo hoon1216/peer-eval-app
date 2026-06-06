@@ -1,4 +1,5 @@
 import {
+  blobStoreAccess,
   MAX_PDF_BYTES,
   useBlobPdfStorage,
 } from "@/lib/pdf-upload-limits";
@@ -59,7 +60,7 @@ export async function savePresentationPdfToBlob(
   const pathname = `presentations/${presentationId}.pdf`;
   const token = process.env.BLOB_READ_WRITE_TOKEN?.trim();
   const blob = await put(pathname, data, {
-    access: "private",
+    access: blobStoreAccess(),
     contentType: "application/pdf",
     allowOverwrite: true,
     addRandomSuffix: false,

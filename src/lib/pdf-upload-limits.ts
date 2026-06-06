@@ -16,6 +16,17 @@ export function useBlobClientUpload() {
   return Boolean(process.env.BLOB_READ_WRITE_TOKEN);
 }
 
+/** Vercel Blob 스토어 접근 방식 (스토어 생성 시 public/private 선택과 일치해야 함) */
+export type BlobStoreAccess = "public" | "private";
+
+export function blobStoreAccess(): BlobStoreAccess {
+  const configured = process.env.BLOB_STORE_ACCESS?.trim().toLowerCase();
+  if (configured === "public" || configured === "private") {
+    return configured;
+  }
+  return "public";
+}
+
 export function formatPdfSizeLimitMb() {
   return Math.round(MAX_PDF_BYTES / (1024 * 1024));
 }

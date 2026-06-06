@@ -1,5 +1,6 @@
 import { auth } from "@/lib/auth";
 import {
+  blobStoreAccess,
   formatPdfSizeLimitMb,
   MAX_PDF_BYTES,
   useBlobClientUpload,
@@ -44,6 +45,7 @@ export async function GET(_request: Request, { params }: Params) {
   return NextResponse.json({
     useBlobStorage: blobStorage,
     useBlobClientUpload: blobClientUpload,
+    blobAccess: blobStoreAccess(),
     maxPdfBytes: MAX_PDF_BYTES,
     maxPdfMb: maxMb,
     directUploadLimitBytes: VERCEL_FUNCTION_BODY_LIMIT_BYTES,

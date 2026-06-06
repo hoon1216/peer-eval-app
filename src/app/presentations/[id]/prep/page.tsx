@@ -18,6 +18,7 @@ type Presentation = {
 type UploadConfig = {
   useBlobStorage: boolean;
   useBlobClientUpload: boolean;
+  blobAccess: "public" | "private";
   maxPdfBytes: number;
   maxPdfMb: number;
   directUploadLimitBytes: number;
@@ -96,7 +97,7 @@ export default function PrepPage() {
       setUploadProgress(0);
       try {
         const blob = await upload(`presentations/${id}.pdf`, payload.pdfFile, {
-          access: "private",
+          access: uploadConfig?.blobAccess ?? "public",
           handleUploadUrl: `/api/presentations/${id}/presentation-pdf/upload`,
           contentType: "application/pdf",
           multipart: payload.pdfFile.size > 5 * 1024 * 1024,
