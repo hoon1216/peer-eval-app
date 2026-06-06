@@ -1,9 +1,6 @@
 import { buildJoinUrl } from "@/lib/access-link";
 import { findCourseByAccessToken } from "@/lib/course-access";
-import {
-  lookupParticipantByName,
-  resolveStudentEnrollment,
-} from "@/lib/course-participants";
+import { lookupParticipantByName } from "@/lib/course-participants";
 import { normalizeParticipantName } from "@/lib/participant-name";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
@@ -219,30 +216,22 @@ export async function POST(request: Request, { params }: Params) {
       }
 
       if (participant.type === "STUDENT") {
-        const enrollmentResult = await resolveStudentEnrollment(
-          course.id,
-          participant.name
-        );
-        if (enrollmentResult && "error" in enrollmentResult) {
-          return NextResponse.json({ error: duplicateNameError }, { status: 409 });
-        }
-        const enrollment = enrollmentResult;
-        if (!enrollment) {
-          return NextResponse.json({ error: "등록된 이름이 없습니다." }, { status: 404 });
-        }
-
-        if (enrollment.student.profileComplete) {
+        if (participant.profileComplete) {
           return NextResponse.json(
             { error: "이미 설정이 완료된 계정입니다." },
             { status: 400 }
           );
+        }
+        const studentUserId = participant.studentUserId;
+        if (!studentUserId) {
+          return NextResponse.json({ error: "등록된 이름이 없습니다." }, { status: 404 });
         }
         if (!studentId) {
           return NextResponse.json({ error: "학번을 입력해주세요." }, { status: 400 });
         }
 
         const emailTaken = await prisma.user.findUnique({ where: { email } });
-        if (emailTaken && emailTaken.id !== enrollment.studentId) {
+        if (emailTaken && emailTaken.id !== studentUserId) {
           return NextResponse.json(
             { error: "이미 사용 중인 이메일입니다." },
             { status: 400 }
@@ -250,24 +239,19 @@ export async function POST(request: Request, { params }: Params) {
         }
 
         const idTaken = await prisma.user.findUnique({ where: { studentId } });
-        if (idTaken && idTaken.id !== enrollment.studentId) {
+        if (idTaken && idTaken.id !== studentUserId) {
           return NextResponse.json(
             { error: "이미 사용 중인 학번입니다." },
             { status: 400 }
           );
         }
 
-        await completeStudentProfile(
-          enrollment.studentId,
-          email,
-          studentId,
-          passwordHash
-        );
+        await completeStudentProfile(studentUserId, email, studentId, passwordHash);
 
         return NextResponse.json({
           ok: true,
           role: "STUDENT",
-          name: enrollment.student.name,
+          name: participant.name,
         });
       }
 

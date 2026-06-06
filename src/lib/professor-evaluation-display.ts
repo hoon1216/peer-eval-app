@@ -8,16 +8,16 @@ export type ProfessorEvaluationFormValues = {
 };
 
 type ObserverStored = {
-  observerProfessorScore: number | null;
-  observerProfessorComment: string | null;
+  observerProfessorScore?: number | null;
+  observerProfessorComment?: string | null;
   observerProfessorReason?: string | null;
   observerProfessorSuggestions?: string | null;
   observerEvaluationIsDraft?: boolean;
 };
 
 type LeadStored = {
-  professorScore: number | null;
-  professorComment: string | null;
+  professorScore?: number | null;
+  professorComment?: string | null;
   professorReason?: string | null;
   professorSuggestions?: string | null;
   professorEvaluationIsDraft?: boolean;
@@ -48,7 +48,7 @@ export function observerEvaluationFromPresentation(
     !Boolean(p.observerProfessorSuggestions?.trim());
 
   return {
-    empathyScore: p.observerProfessorScore,
+    empathyScore: p.observerProfessorScore ?? null,
     reason,
     suggestions,
     isDraft: resolveIsDraft(p.observerEvaluationIsDraft, legacySubmitted),
@@ -67,7 +67,7 @@ export function leadEvaluationFromPresentation(
     !Boolean(p.professorSuggestions?.trim());
 
   return {
-    empathyScore: p.professorScore,
+    empathyScore: p.professorScore ?? null,
     reason,
     suggestions,
     isDraft: resolveIsDraft(p.professorEvaluationIsDraft, legacySubmitted),
