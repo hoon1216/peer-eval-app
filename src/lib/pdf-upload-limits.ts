@@ -19,3 +19,8 @@ export function useBlobClientUpload() {
 export function formatPdfSizeLimitMb() {
   return Math.round(MAX_PDF_BYTES / (1024 * 1024));
 }
+
+export function isPdfFile(file: File) {
+  if (file.type === "application/pdf") return true;
+  return file.name.toLowerCase().endsWith(".pdf");
+}

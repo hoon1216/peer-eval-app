@@ -1,6 +1,6 @@
 "use client";
 
-import { parseJsonResponse } from "@/lib/parse-json-response";
+import { isPdfFile } from "@/lib/pdf-upload-limits";
 import { upload } from "@vercel/blob/client";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -59,7 +59,7 @@ export default function PrepPage() {
 
   function validatePdfFile(file: File | null) {
     if (!file || !uploadConfig) return null;
-    if (file.type !== "application/pdf") {
+    if (!isPdfFile(file)) {
       return "발표 PDF는 PDF 파일만 첨부할 수 있습니다.";
     }
     if (file.size > uploadConfig.maxPdfBytes) {
@@ -156,7 +156,16 @@ export default function PrepPage() {
         pdfFile,
       });
 
-      const data = await parseJsonResponse<{ error?: string }>(res);
+      const responseText = await res.text();
+      let data: { error?: string } | null = null;
+      if (responseText.trim()) {
+        try {
+          data = JSON.parse(responseText) as { error?: string };
+        } catch {
+          data = null;
+        }
+      }
+
       setLoading(false);
       setUploadProgress(null);
 
@@ -167,7 +176,12 @@ export default function PrepPage() {
           );
           return;
         }
-        setError(data?.error ?? "제출에 실패했습니다.");
+        setError(
+          data?.error ??
+            (responseText.trim()
+              ? responseText.slice(0, 200)
+              : `제출에 실패했습니다. (${res.status})`)
+        );
         return;
       }
 

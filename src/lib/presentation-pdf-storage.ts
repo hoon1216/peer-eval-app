@@ -57,11 +57,13 @@ export async function savePresentationPdfToBlob(
   data: Buffer
 ) {
   const pathname = `presentations/${presentationId}.pdf`;
+  const token = process.env.BLOB_READ_WRITE_TOKEN?.trim();
   const blob = await put(pathname, data, {
     access: "private",
     contentType: "application/pdf",
     allowOverwrite: true,
     addRandomSuffix: false,
+    ...(token ? { token } : {}),
   });
   return storedPathFromBlobUrl(blob.url);
 }

@@ -34,7 +34,11 @@ export async function GET(_request: Request, { params }: Params) {
 
   let hint = `PDF는 최대 ${maxMb}MB까지 첨부할 수 있습니다.`;
   if (blobStorage && !blobClientUpload) {
-    hint += ` ${directMb}MB 이하 파일은 일반 업로드, 그보다 큰 파일은 BLOB_READ_WRITE_TOKEN 설정이 필요합니다.`;
+    hint += ` ${directMb}MB 이하 파일은 서버 업로드, 그보다 큰 파일은 BLOB_READ_WRITE_TOKEN이 필요합니다.`;
+  }
+  if (blobStorage && !blobClientUpload) {
+    hint +=
+      " PDF 저장 오류가 나면 Vercel Storage에서 BLOB_READ_WRITE_TOKEN을 프로젝트에 연결한 뒤 Redeploy 해주세요.";
   }
 
   return NextResponse.json({
