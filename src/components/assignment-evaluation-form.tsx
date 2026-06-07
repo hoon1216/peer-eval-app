@@ -1,12 +1,19 @@
 "use client";
 
+import {
+  COMPLETENESS_LABEL,
+  COMMENT_LABEL,
+  formatCompletenessScore,
+  SCORE_MAX,
+  SCORE_MIN,
+  SCORE_STEP,
+} from "@/lib/evaluation-labels";
+
 type Props = {
-  empathyScore: number;
-  reason: string;
-  suggestions: string;
-  onEmpathyScoreChange: (value: number) => void;
-  onReasonChange: (value: string) => void;
-  onSuggestionsChange: (value: string) => void;
+  completenessScore: number;
+  comment: string;
+  onCompletenessScoreChange: (value: number) => void;
+  onCommentChange: (value: string) => void;
   error?: string;
   draftSaved?: boolean;
   loading?: boolean;
@@ -16,12 +23,10 @@ type Props = {
 };
 
 export function AssignmentEvaluationForm({
-  empathyScore,
-  reason,
-  suggestions,
-  onEmpathyScoreChange,
-  onReasonChange,
-  onSuggestionsChange,
+  completenessScore,
+  comment,
+  onCompletenessScoreChange,
+  onCommentChange,
   error,
   draftSaved,
   loading,
@@ -33,43 +38,35 @@ export function AssignmentEvaluationForm({
     <div className="space-y-5">
       <div>
         <label className="block text-sm font-medium">
-          1. 공감도 (10점 만점): {empathyScore}점
+          1. {COMPLETENESS_LABEL} (10점 만점):{" "}
+          {formatCompletenessScore(completenessScore)}점
         </label>
         <input
           type="range"
-          min={1}
-          max={10}
-          value={empathyScore}
+          min={SCORE_MIN}
+          max={SCORE_MAX}
+          step={SCORE_STEP}
+          value={completenessScore}
           disabled={readOnly}
-          onChange={(e) => onEmpathyScoreChange(Number(e.target.value))}
+          onChange={(e) =>
+            onCompletenessScoreChange(Number(e.target.value))
+          }
           className="mt-2 w-full disabled:opacity-60"
         />
         <div className="flex justify-between text-xs text-zinc-500">
-          <span>1</span>
-          <span>10</span>
+          <span>{SCORE_MIN}</span>
+          <span>{SCORE_MAX}</span>
         </div>
       </div>
 
       <div>
-        <label className="block text-sm font-medium">2. 평가 이유</label>
+        <label className="block text-sm font-medium">2. {COMMENT_LABEL}</label>
         <textarea
-          rows={4}
-          value={reason}
+          rows={6}
+          value={comment}
           disabled={readOnly}
-          onChange={(e) => onReasonChange(e.target.value)}
-          placeholder="공감도 점수를 부여한 이유를 작성해주세요"
-          className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 disabled:opacity-60"
-        />
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium">3. 개선점 및 아이디어 제안</label>
-        <textarea
-          rows={4}
-          value={suggestions}
-          disabled={readOnly}
-          onChange={(e) => onSuggestionsChange(e.target.value)}
-          placeholder="프로젝트를 발전시킬 수 있는 구체적인 제안을 작성해주세요"
+          onChange={(e) => onCommentChange(e.target.value)}
+          placeholder="과제에 대한 평가 의견을 작성해주세요"
           className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 disabled:opacity-60"
         />
       </div>

@@ -1,20 +1,19 @@
 import type { EvaluationContent } from "@/lib/evaluation-content";
+import {
+  COMMENT_LABEL,
+  mergeEvaluationComment,
+} from "@/lib/evaluation-labels";
 
-export const REASON_QUESTION_LABEL = "평가 이유";
-export const SUGGESTIONS_QUESTION_LABEL = "개선점 및 아이디어 제안";
+export { COMMENT_LABEL };
 
-export function collectReasons(items: EvaluationContent[]): string[] {
-  return items.map((item) => item.reason.trim()).filter(Boolean);
-}
-
-export function collectSuggestions(items: EvaluationContent[]): string[] {
-  return items.map((item) => item.suggestions.trim()).filter(Boolean);
+export function collectComments(items: EvaluationContent[]): string[] {
+  return items
+    .map((item) => mergeEvaluationComment(item.reason, item.suggestions))
+    .filter(Boolean);
 }
 
 export function hasGroupedEvaluationContent(items: EvaluationContent[]) {
-  return (
-    collectReasons(items).length > 0 || collectSuggestions(items).length > 0
-  );
+  return collectComments(items).length > 0;
 }
 
 export function mergeProfessorEvaluationItems(

@@ -1,6 +1,10 @@
 "use client";
 
 import { AssignmentEvaluationForm } from "@/components/assignment-evaluation-form";
+import {
+  mergeEvaluationComment,
+  normalizeCompletenessScore,
+} from "@/lib/evaluation-labels";
 import { parseJsonResponse } from "@/lib/parse-json-response";
 import {
   isProfessorEvaluationSubmitted,
@@ -33,9 +37,8 @@ export function ProfessorAssignmentEvaluationPage({
   const router = useRouter();
   const id = params.id as string;
   const [presentation, setPresentation] = useState<Presentation | null>(null);
-  const [empathyScore, setEmpathyScore] = useState(5);
-  const [reason, setReason] = useState("");
-  const [suggestions, setSuggestions] = useState("");
+  const [completenessScore, setCompletenessScore] = useState(5);
+  const [comment, setComment] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [draftSaving, setDraftSaving] = useState(false);
@@ -43,11 +46,10 @@ export function ProfessorAssignmentEvaluationPage({
   const [loadError, setLoadError] = useState("");
 
   function applyEvaluation(evalData: ProfessorEvaluationFormValues) {
-    setEmpathyScore(
-      evalData.empathyScore != null ? Math.round(evalData.empathyScore) : 5
+    setCompletenessScore(
+      normalizeCompletenessScore(evalData.empathyScore, 5) ?? 5
     );
-    setReason(evalData.reason);
-    setSuggestions(evalData.suggestions);
+    setComment(mergeEvaluationComment(evalData.reason, evalData.suggestions));
   }
 
   useEffect(() => {
@@ -83,9 +85,9 @@ export function ProfessorAssignmentEvaluationPage({
       body: JSON.stringify({
         evaluationRole,
         draft,
-        empathyScore,
-        reason,
-        suggestions,
+        empathyScore: completenessScore,
+        reason: comment,
+        suggestions: "",
       }),
     });
 
@@ -183,12 +185,10 @@ export function ProfessorAssignmentEvaluationPage({
         className="mt-6 space-y-5 rounded-xl border border-zinc-200 bg-white p-6"
       >
         <AssignmentEvaluationForm
-          empathyScore={empathyScore}
-          reason={reason}
-          suggestions={suggestions}
-          onEmpathyScoreChange={setEmpathyScore}
-          onReasonChange={setReason}
-          onSuggestionsChange={setSuggestions}
+          completenessScore={completenessScore}
+          comment={comment}
+          onCompletenessScoreChange={setCompletenessScore}
+          onCommentChange={setComment}
           error={error}
           draftSaved={draftSaved}
           loading={loading}

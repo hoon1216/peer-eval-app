@@ -7,6 +7,12 @@ import {
   upsertEvaluation,
 } from "@/lib/evaluation-persistence";
 import {
+  COMMENT_LABEL,
+  COMPLETENESS_LABEL,
+  isValidCompletenessScore,
+  normalizeCompletenessScore,
+} from "@/lib/evaluation-labels";
+import {
   canPeerEvaluate,
   isLeadProfessor,
   userCanAccessCourse,
@@ -17,16 +23,24 @@ import { z } from "zod";
 
 type Params = { params: Promise<{ id: string }> };
 
+const completenessScoreSchema = z
+  .number()
+  .min(1)
+  .max(10)
+  .refine(isValidCompletenessScore, {
+    message: `${COMPLETENESS_LABEL} 점수는 0.5 단위로 선택해주세요.`,
+  });
+
 const finalSchema = z.object({
   draft: z.literal(false).optional(),
-  empathyScore: z.number().int().min(1).max(10),
-  reason: z.string().min(1, "평가 이유를 입력해주세요."),
-  suggestions: z.string().min(1, "개선점 및 아이디어를 입력해주세요."),
+  empathyScore: completenessScoreSchema,
+  reason: z.string().min(1, `${COMMENT_LABEL}을 입력해주세요.`),
+  suggestions: z.string().optional(),
 });
 
 const draftSchema = z.object({
   draft: z.literal(true),
-  empathyScore: z.number().int().min(1).max(10).optional(),
+  empathyScore: completenessScoreSchema.optional(),
   reason: z.string().optional(),
   suggestions: z.string().optional(),
 });
@@ -139,9 +153,9 @@ async function postEvaluation(request: Request, { params }: Params) {
     const result = await upsertEvaluation({
       presentationId,
       evaluatorId: session.user.id,
-      empathyScore: parsed.data.empathyScore ?? 5,
+      empathyScore: normalizeCompletenessScore(parsed.data.empathyScore, 5) ?? 5,
       reason: parsed.data.reason ?? "",
-      suggestions: parsed.data.suggestions ?? "",
+      suggestions: "",
       isDraft: true,
     });
 
@@ -172,7 +186,7 @@ async function postEvaluation(request: Request, { params }: Params) {
     evaluatorId: session.user.id,
     empathyScore: parsed.data.empathyScore,
     reason: parsed.data.reason,
-    suggestions: parsed.data.suggestions,
+    suggestions: "",
     isDraft: false,
   });
 

@@ -6,6 +6,12 @@ import {
   View,
   StyleSheet,
 } from "@react-pdf/renderer";
+import {
+  COMMENT_LABEL,
+  COMPLETENESS_LABEL,
+  formatCompletenessScore,
+  mergeEvaluationComment,
+} from "@/lib/evaluation-labels";
 import path from "node:path";
 
 Font.register({
@@ -99,36 +105,29 @@ export function FeedbackPdfDocument(props: FeedbackPdfProps) {
         </View>
 
         <View style={styles.scoreBox}>
-          <Text>피어 공감도 평균: {props.peerAverage ?? "-"} / 10</Text>
+          <Text>
+            피어 {COMPLETENESS_LABEL} 평균: {props.peerAverage ?? "-"} / 10
+          </Text>
           <Text>교수 평가: {props.professorScore ?? "-"} / 10</Text>
           <Text>최종 점수 (50%+50%): {props.finalGrade ?? "-"} / 10</Text>
         </View>
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>
-            평가 이유 ({props.evaluations.length}건)
+            {COMMENT_LABEL} ({props.evaluations.length}건)
           </Text>
           {props.evaluations.map((e, i) => (
-            <View key={`reason-${i}`} style={styles.evalBlock}>
+            <View key={`comment-${i}`} style={styles.evalBlock}>
               <Text style={styles.evalHeader}>
-                {e.evaluatorName} · 공감도 {e.empathyScore}점
+                {e.evaluatorName} · {COMPLETENESS_LABEL}{" "}
+                {formatCompletenessScore(e.empathyScore)}점
               </Text>
-              <Text>{e.reason}</Text>
+              <Text>
+                {mergeEvaluationComment(e.reason, e.suggestions)}
+              </Text>
             </View>
           ))}
         </View>
-      </Page>
-
-      <Page size="A4" style={styles.page}>
-        <Text style={styles.sectionTitle}>
-          개선점 및 아이디어 제안 ({props.evaluations.length}건)
-        </Text>
-        {props.evaluations.map((e, i) => (
-          <View key={`suggest-${i}`} style={styles.evalBlock}>
-            <Text style={styles.evalHeader}>{e.evaluatorName}</Text>
-            <Text>{e.suggestions}</Text>
-          </View>
-        ))}
       </Page>
     </Document>
   );

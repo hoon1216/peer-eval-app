@@ -2,10 +2,8 @@
 
 import type { EvaluationContent } from "@/lib/evaluation-content";
 import {
-  collectReasons,
-  collectSuggestions,
-  REASON_QUESTION_LABEL,
-  SUGGESTIONS_QUESTION_LABEL,
+  collectComments,
+  COMMENT_LABEL,
 } from "@/lib/group-evaluation-content";
 
 function QuestionAnswers({
@@ -21,7 +19,7 @@ function QuestionAnswers({
   return (
     <ul className="list-disc space-y-2 pl-5">
       {entries.map((text, i) => (
-        <li key={i} className="text-sm leading-relaxed text-zinc-700">
+        <li key={i} className="whitespace-pre-wrap text-sm leading-relaxed text-zinc-700">
           {text}
         </li>
       ))}
@@ -34,26 +32,13 @@ export function GroupedEvaluationContent({
 }: {
   items: EvaluationContent[];
 }) {
-  const reasons = collectReasons(items);
-  const suggestions = collectSuggestions(items);
+  const comments = collectComments(items);
 
   return (
-    <div className="space-y-5">
-      <div className="rounded-lg border border-zinc-200 p-3">
-        <p className="text-sm font-semibold text-zinc-800">
-          1. {REASON_QUESTION_LABEL}
-        </p>
-        <div className="mt-2">
-          <QuestionAnswers entries={reasons} />
-        </div>
-      </div>
-      <div className="rounded-lg border border-zinc-200 p-3">
-        <p className="text-sm font-semibold text-zinc-800">
-          2. {SUGGESTIONS_QUESTION_LABEL}
-        </p>
-        <div className="mt-2">
-          <QuestionAnswers entries={suggestions} />
-        </div>
+    <div className="rounded-lg border border-zinc-200 p-3">
+      <p className="text-sm font-semibold text-zinc-800">1. {COMMENT_LABEL}</p>
+      <div className="mt-2">
+        <QuestionAnswers entries={comments} />
       </div>
     </div>
   );

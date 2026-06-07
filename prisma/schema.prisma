@@ -117,7 +117,7 @@ model Evaluation {
   id             String   @id @default(cuid())
   presentationId String
   evaluatorId    String
-  empathyScore   Int
+  empathyScore   Float
   reason         String
   suggestions    String
   isDraft        Boolean  @default(false)

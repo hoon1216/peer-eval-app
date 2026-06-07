@@ -1,6 +1,10 @@
 "use client";
 
 import { AssignmentEvaluationForm } from "@/components/assignment-evaluation-form";
+import {
+  mergeEvaluationComment,
+  normalizeCompletenessScore,
+} from "@/lib/evaluation-labels";
 import { parseJsonResponse } from "@/lib/parse-json-response";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
@@ -31,9 +35,8 @@ export default function EvaluatePage() {
   const router = useRouter();
   const id = params.id as string;
   const [presentation, setPresentation] = useState<Presentation | null>(null);
-  const [empathyScore, setEmpathyScore] = useState(5);
-  const [reason, setReason] = useState("");
-  const [suggestions, setSuggestions] = useState("");
+  const [completenessScore, setCompletenessScore] = useState(5);
+  const [comment, setComment] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [draftSaving, setDraftSaving] = useState(false);
@@ -42,9 +45,10 @@ export default function EvaluatePage() {
 
   function applyEvaluation(evalData: MyEvaluation | null) {
     if (!evalData) return;
-    setEmpathyScore(evalData.empathyScore);
-    setReason(evalData.reason);
-    setSuggestions(evalData.suggestions);
+    setCompletenessScore(
+      normalizeCompletenessScore(evalData.empathyScore, 5) ?? 5
+    );
+    setComment(mergeEvaluationComment(evalData.reason, evalData.suggestions));
   }
 
   useEffect(() => {
@@ -71,9 +75,9 @@ export default function EvaluatePage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         draft: true,
-        empathyScore,
-        reason,
-        suggestions,
+        empathyScore: completenessScore,
+        reason: comment,
+        suggestions: "",
       }),
     });
 
@@ -99,7 +103,12 @@ export default function EvaluatePage() {
     const res = await fetch(`/api/presentations/${id}/evaluations`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ draft: false, empathyScore, reason, suggestions }),
+      body: JSON.stringify({
+        draft: false,
+        empathyScore: completenessScore,
+        reason: comment,
+        suggestions: "",
+      }),
     });
 
     const data = await parseJsonResponse<{ error?: string }>(res);
@@ -183,12 +192,10 @@ export default function EvaluatePage() {
         className="mt-6 rounded-xl border border-zinc-200 bg-white p-6"
       >
         <AssignmentEvaluationForm
-          empathyScore={empathyScore}
-          reason={reason}
-          suggestions={suggestions}
-          onEmpathyScoreChange={setEmpathyScore}
-          onReasonChange={setReason}
-          onSuggestionsChange={setSuggestions}
+          completenessScore={completenessScore}
+          comment={comment}
+          onCompletenessScoreChange={setCompletenessScore}
+          onCommentChange={setComment}
           error={error}
           draftSaved={draftSaved}
           loading={loading}

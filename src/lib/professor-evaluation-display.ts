@@ -1,4 +1,5 @@
 import type { EvaluationContent } from "@/lib/evaluation-content";
+import { mergeEvaluationComment } from "@/lib/evaluation-labels";
 
 export type ProfessorEvaluationFormValues = {
   empathyScore: number | null;
@@ -133,10 +134,14 @@ export function professorEvaluationForModal(
   if (!hasProfessorEvaluationContent(evalData)) {
     return [];
   }
+  const comment = mergeEvaluationComment(
+    evalData.reason,
+    evalData.suggestions
+  );
   return [
     {
-      reason: evalData.reason.trim() || "—",
-      suggestions: evalData.suggestions.trim() || "—",
+      reason: comment || "—",
+      suggestions: "",
     },
   ];
 }

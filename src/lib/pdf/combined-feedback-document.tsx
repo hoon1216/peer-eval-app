@@ -8,12 +8,10 @@ import {
 } from "@react-pdf/renderer";
 import type { EvaluationContent } from "@/lib/evaluation-content";
 import {
-  collectReasons,
-  collectSuggestions,
+  collectComments,
+  COMMENT_LABEL,
   hasGroupedEvaluationContent,
   mergeProfessorEvaluationItems,
-  REASON_QUESTION_LABEL,
-  SUGGESTIONS_QUESTION_LABEL,
 } from "@/lib/group-evaluation-content";
 import path from "node:path";
 
@@ -107,18 +105,11 @@ function GroupedItemsPdf({ items }: { items: EvaluationContent[] }) {
     return <Text style={styles.empty}>등록된 내용이 없습니다.</Text>;
   }
   return (
-    <>
-      <QuestionSectionPdf
-        questionNumber={1}
-        label={REASON_QUESTION_LABEL}
-        entries={collectReasons(items)}
-      />
-      <QuestionSectionPdf
-        questionNumber={2}
-        label={SUGGESTIONS_QUESTION_LABEL}
-        entries={collectSuggestions(items)}
-      />
-    </>
+    <QuestionSectionPdf
+      questionNumber={1}
+      label={COMMENT_LABEL}
+      entries={collectComments(items)}
+    />
   );
 }
 
