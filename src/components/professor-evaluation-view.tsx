@@ -1,6 +1,10 @@
 "use client";
 
 import { CommentModal } from "@/components/comment-modal";
+import {
+  evaluationContentsFromParts,
+  formatScoreDisplay,
+} from "@/lib/evaluation-display";
 import { FeedbackPdfButton } from "@/components/feedback-pdf-button";
 import { downloadFeedbackPdf } from "@/lib/download-feedback-pdf";
 import { submittedEvaluations } from "@/lib/evaluation-filters";
@@ -119,10 +123,12 @@ export function ProfessorEvaluationView({
   function openPeerComments(p: Presentation) {
     setModal({
       title: `${p.presenter.name} · 학생 평가`,
-      items: submittedEvaluations(p.evaluations).map((e) => ({
-        reason: e.reason,
-        suggestions: e.suggestions,
-      })),
+      items: evaluationContentsFromParts(
+        submittedEvaluations(p.evaluations).map((e) => ({
+          reason: e.reason,
+          suggestions: e.suggestions,
+        }))
+      ),
       emptyMessage: "등록된 학생 평가 내용이 없습니다.",
     });
   }
@@ -333,7 +339,9 @@ export function ProfessorEvaluationView({
                 <div className={`${COMMENT_GRID_PROFESSOR} items-stretch ${ROW_MIN}`}>
                   <div className={commentBodyCellStacked}>
                     <span className="text-xs font-semibold leading-none text-zinc-800">
-                      {registered ? `${p.peerAverage ?? "—"} / 10` : "—"}
+                      {registered
+                        ? `${formatScoreDisplay(p.peerAverage)} / 10`
+                        : "—"}
                     </span>
                     <button
                       type="button"
@@ -349,7 +357,7 @@ export function ProfessorEvaluationView({
                   <div className={commentBodyCellStacked}>
                     <span className="text-xs font-semibold leading-none text-zinc-800">
                       {registered
-                        ? `${p.observerProfessorScore ?? "—"} / 10`
+                        ? `${formatScoreDisplay(p.observerProfessorScore)} / 10`
                         : "—"}
                     </span>
                     <button
@@ -367,7 +375,9 @@ export function ProfessorEvaluationView({
                   </div>
                   <div className={commentBodyCellStacked}>
                     <span className="text-xs font-semibold leading-none text-zinc-800">
-                      {registered ? `${p.professorScore ?? "—"} / 10` : "—"}
+                      {registered
+                        ? `${formatScoreDisplay(p.professorScore)} / 10`
+                        : "—"}
                     </span>
                     <button
                       type="button"
@@ -384,7 +394,9 @@ export function ProfessorEvaluationView({
                   </div>
                   <div className={commentBodyCell}>
                     <span className="text-[0.9rem] font-semibold leading-none text-zinc-800">
-                      {registered ? `${p.finalGrade ?? "—"} / 10` : "—"}
+                      {registered
+                        ? `${formatScoreDisplay(p.finalGrade)} / 10`
+                        : "—"}
                     </span>
                   </div>
                   <div className={commentBodyCell}>

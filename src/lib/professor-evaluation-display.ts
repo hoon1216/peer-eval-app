@@ -118,11 +118,9 @@ export function hasSubmittedLeadEvaluation(p: LeadStored) {
 export function hasProfessorEvaluationContent(
   evalData: ProfessorEvaluationFormValues
 ) {
-  return (
-    evalData.empathyScore != null ||
-    Boolean(evalData.reason.trim()) ||
-    Boolean(evalData.suggestions.trim())
-  );
+  const comment =
+    evalData.reason.trim() || evalData.suggestions.trim();
+  return evalData.empathyScore != null || Boolean(comment);
 }
 
 export function professorEvaluationForModal(

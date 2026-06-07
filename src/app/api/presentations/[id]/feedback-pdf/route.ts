@@ -5,6 +5,7 @@ import {
   leadEvaluationFromPresentation,
   observerEvaluationFromPresentation,
 } from "@/lib/professor-evaluation-display";
+import { evaluationContentFromParts } from "@/lib/evaluation-display";
 import { listSubmittedEvaluations } from "@/lib/evaluation-persistence";
 import { mergeProfessorFields } from "@/lib/presentation-professor-fields";
 import { prisma } from "@/lib/prisma";
@@ -76,21 +77,17 @@ async function getFeedbackPdf(_request: Request, { params }: Params) {
       presenterName: presentation.presenter.name,
       presenterStudentId: presentation.presenter.studentId ?? "미등록",
       title: presentation.title ?? "제목 미입력",
-      studentEvaluations: peerEvaluations.map((e) => ({
-        reason: e.reason,
-        suggestions: e.suggestions,
-      })),
+      studentEvaluations: peerEvaluations.map((e) =>
+        evaluationContentFromParts(e.reason, e.suggestions)
+      ),
       observerEvaluation: isProfessorEvaluationSubmitted(observerEval)
-        ? {
-            reason: observerEval.reason,
-            suggestions: observerEval.suggestions,
-          }
+        ? evaluationContentFromParts(
+            observerEval.reason,
+            observerEval.suggestions
+          )
         : null,
       professorEvaluation: isProfessorEvaluationSubmitted(leadEval)
-        ? {
-            reason: leadEval.reason,
-            suggestions: leadEval.suggestions,
-          }
+        ? evaluationContentFromParts(leadEval.reason, leadEval.suggestions)
         : null,
     })
   );

@@ -2,6 +2,8 @@
 
 import { AssignmentEvaluationForm } from "@/components/assignment-evaluation-form";
 import {
+  COMMENT_LABEL,
+  COMPLETENESS_LABEL,
   mergeEvaluationComment,
   normalizeCompletenessScore,
 } from "@/lib/evaluation-labels";
@@ -178,6 +180,9 @@ export default function EvaluatePage() {
       <p className="mt-1 text-zinc-600">
         발표자: {presentation.presenter.name} (
         {presentation.presenter.studentId ?? "학번 미등록"})
+      </p>
+      <p className="mt-1 text-sm text-zinc-500">
+        {COMPLETENESS_LABEL}(0.5점 단위)와 {COMMENT_LABEL}을 입력해주세요.
       </p>
 
       <div className="mt-6 rounded-xl border border-zinc-200 bg-white p-6">

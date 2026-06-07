@@ -1,6 +1,7 @@
 "use client";
 
 import { CommentModal } from "@/components/comment-modal";
+import { evaluationContentsFromParts } from "@/lib/evaluation-display";
 import { FeedbackPdfButton } from "@/components/feedback-pdf-button";
 import { submittedEvaluations } from "@/lib/evaluation-filters";
 import {
@@ -108,10 +109,12 @@ export function StudentEvaluationView({
   function openPeerComments(p: Presentation) {
     setModal({
       title: `${p.presenter.name} · 학생 평가`,
-      items: submittedEvaluations(p.evaluations).map((e) => ({
-        reason: e.reason,
-        suggestions: e.suggestions,
-      })),
+      items: evaluationContentsFromParts(
+        submittedEvaluations(p.evaluations).map((e) => ({
+          reason: e.reason,
+          suggestions: e.suggestions,
+        }))
+      ),
       emptyMessage: "등록된 학생 평가 내용이 없습니다.",
     });
   }

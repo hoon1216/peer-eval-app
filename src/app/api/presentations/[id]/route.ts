@@ -18,6 +18,10 @@ import {
 } from "@/lib/presentation-professor-fields";
 import { prisma } from "@/lib/prisma";
 import { presentationPdfFileExists } from "@/lib/presentation-pdf-storage";
+import {
+  isValidCompletenessScore,
+  normalizeCompletenessScore,
+} from "@/lib/evaluation-labels";
 import { saveProfessorEvaluation } from "@/lib/save-professor-evaluation";
 import { NextResponse } from "next/server";
 
@@ -206,31 +210,47 @@ async function patchPresentation(request: Request, { params }: Params) {
     });
   }
 
-  const parseScore = (value: unknown) =>
-    value === null || value === "" || value === undefined ? null : Number(value);
+  const parseCompletenessScore = (value: unknown) => {
+    if (value === null || value === "" || value === undefined) return null;
+    const score = normalizeCompletenessScore(value);
+    if (score === null) return Number.NaN;
+    return score;
+  };
 
   if (
     isLeadProfessor(session.user.role) &&
     presentation.course.professorId === session.user.id
   ) {
-    const professorScore = parseScore(body.professorScore);
-    const observerProfessorScore = parseScore(body.observerProfessorScore);
-    const professorComment =
-      body.professorComment !== undefined
-        ? String(body.professorComment).trim() || null
-        : undefined;
-    const observerProfessorComment =
-      body.observerProfessorComment !== undefined
-        ? String(body.observerProfessorComment).trim() || null
-        : undefined;
+    const professorScore = parseCompletenessScore(body.professorScore);
+    const observerProfessorScore = parseCompletenessScore(
+      body.observerProfessorScore
+    );
+    const professorReason =
+      body.professorReason !== undefined
+        ? String(body.professorReason).trim() || null
+        : body.professorComment !== undefined
+          ? String(body.professorComment).trim() || null
+          : undefined;
+    const observerProfessorReason =
+      body.observerProfessorReason !== undefined
+        ? String(body.observerProfessorReason).trim() || null
+        : body.observerProfessorComment !== undefined
+          ? String(body.observerProfessorComment).trim() || null
+          : undefined;
 
     for (const [label, score] of [
       ["담당 교수", professorScore],
       ["참관 교수", observerProfessorScore],
     ] as const) {
-      if (score !== null && (score < 0 || score > 10)) {
+      if (score !== null && Number.isNaN(score)) {
         return NextResponse.json(
-          { error: `${label} 점수는 0~10 사이여야 합니다.` },
+          { error: `${label} 완성도 점수는 1~10 사이 0.5 단위여야 합니다.` },
+          { status: 400 }
+        );
+      }
+      if (score !== null && !isValidCompletenessScore(score)) {
+        return NextResponse.json(
+          { error: `${label} 완성도 점수는 0.5 단위로 입력해주세요.` },
           { status: 400 }
         );
       }
@@ -239,8 +259,12 @@ async function patchPresentation(request: Request, { params }: Params) {
     const updated = await updatePresentationProfessorFields(id, {
       professorScore,
       observerProfessorScore,
-      professorComment,
-      observerProfessorComment,
+      professorReason,
+      observerProfessorReason,
+      professorComment: null,
+      observerProfessorComment: null,
+      professorSuggestions: null,
+      observerProfessorSuggestions: null,
       status:
         typeof body.status === "string"
           ? (body.status as (typeof presentation)["status"])
