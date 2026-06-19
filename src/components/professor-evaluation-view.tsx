@@ -201,6 +201,12 @@ export function ProfessorEvaluationView({
             코멘트 PDF 출력
           </button>
         )}
+        <a
+          href={`/api/courses/${courseId}/export-evaluations-pdf`}
+          className="rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-medium hover:bg-zinc-50"
+        >
+          개별 평가 PDF 출력
+        </a>
       </div>
 
       <div className="relative overflow-x-auto rounded-xl border-2 border-zinc-800">

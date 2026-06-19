@@ -1,12 +1,18 @@
 import { auth } from "@/lib/auth";
 import { canViewCourseResults, userCanAccessCourse } from "@/lib/permissions";
 import { enrichPresentationsForResults } from "@/lib/course-results";
+import { formatPeerEvaluationList } from "@/lib/export-evaluation-details";
+import { submittedEvaluations } from "@/lib/evaluation-filters";
 import { mergeProfessorFieldsBatch } from "@/lib/presentation-professor-fields";
 import { sortPresentationsByPresenterName } from "@/lib/sort-presentations";
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 
 type Params = { params: Promise<{ id: string }> };
+
+function csvCell(value: string | number | null | undefined) {
+  return `"${String(value ?? "").replace(/"/g, '""')}"`;
+}
 
 export async function GET(_request: Request, { params }: Params) {
   const session = await auth();
@@ -33,19 +39,29 @@ export async function GET(_request: Request, { params }: Params) {
     where: { courseId: id },
     include: {
       presenter: { select: { studentId: true, name: true } },
-      evaluations: { select: { empathyScore: true, isDraft: true } },
+      evaluations: {
+        select: {
+          empathyScore: true,
+          reason: true,
+          suggestions: true,
+          isDraft: true,
+          evaluator: { select: { name: true } },
+        },
+      },
     },
   });
 
   const withProfessorFields = await mergeProfessorFieldsBatch(presentations);
 
-  const rows = sortPresentationsByPresenterName(
-    enrichPresentationsForResults(withProfessorFields, {
-      weightPeer: course.weightPeer,
-      weightObserver: course.weightObserver,
-      weightLead: course.weightLead,
-    })
+  const sortedPresentations = sortPresentationsByPresenterName(
+    withProfessorFields
   );
+
+  const rows = enrichPresentationsForResults(sortedPresentations, {
+    weightPeer: course.weightPeer,
+    weightObserver: course.weightObserver,
+    weightLead: course.weightLead,
+  });
 
   const header = [
     "#",
@@ -53,6 +69,7 @@ export async function GET(_request: Request, { params }: Params) {
     "이름",
     "평가 과제",
     "동료평가",
+    "동료평가 내역",
     "참관 교수 평가",
     "담당 교수 평가",
     "평가결과",
@@ -60,21 +77,25 @@ export async function GET(_request: Request, { params }: Params) {
   ];
   const lines = [
     header.join(","),
-    ...rows.map((r, i) =>
-      [
+    ...rows.map((r, i) => {
+      const submitted = submittedEvaluations(
+        sortedPresentations[i].evaluations
+      );
+      const peerDetails = formatPeerEvaluationList(submitted);
+      const values = [
         i + 1,
         r.presenter.studentId ?? "",
         r.presenter.name,
         r.title ?? "",
         r.peerAverage ?? "",
+        peerDetails,
         r.observerProfessorScore ?? "",
         r.professorScore ?? "",
         r.finalGrade ?? "",
         r.rank ?? "",
-      ]
-        .map((v) => `"${String(v).replace(/"/g, '""')}"`)
-        .join(",")
-    ),
+      ];
+      return values.map((v) => csvCell(v)).join(",");
+    }),
   ];
 
   const bom = "\uFEFF";
