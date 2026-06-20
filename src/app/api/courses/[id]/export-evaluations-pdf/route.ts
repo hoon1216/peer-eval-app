@@ -1,9 +1,11 @@
 import { auth } from "@/lib/auth";
 import { canViewCourseResults, userCanAccessCourse } from "@/lib/permissions";
-import { peerEvaluationsToRows } from "@/lib/export-evaluation-details";
+import {
+  peerEvaluationsToRows,
+  sortIndividualEvaluationRows,
+} from "@/lib/export-evaluation-details";
 import { submittedEvaluations } from "@/lib/evaluation-filters";
 import { IndividualEvaluationsPdfDocument } from "@/lib/pdf/individual-evaluations-document";
-import { sortPresentationsByPresenterName } from "@/lib/sort-presentations";
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { renderToBuffer } from "@react-pdf/renderer";
@@ -47,8 +49,8 @@ async function exportEvaluationsPdf(_request: Request, { params }: Params) {
 
   const presentations = await prisma.presentation.findMany({
     where: { courseId: id },
-    include: {
-      presenter: { select: { name: true, studentId: true } },
+    select: {
+      title: true,
       evaluations: {
         select: {
           empathyScore: true,
@@ -61,12 +63,12 @@ async function exportEvaluationsPdf(_request: Request, { params }: Params) {
     },
   });
 
-  const sorted = sortPresentationsByPresenterName(presentations);
-  const rows = sorted.flatMap((presentation) =>
-    peerEvaluationsToRows(
-      presentation.presenter.name,
-      presentation.presenter.studentId,
-      submittedEvaluations(presentation.evaluations)
+  const rows = sortIndividualEvaluationRows(
+    presentations.flatMap((presentation) =>
+      peerEvaluationsToRows(
+        presentation.title?.trim() || "미등록",
+        submittedEvaluations(presentation.evaluations)
+      )
     )
   );
 

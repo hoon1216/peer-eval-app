@@ -69,9 +69,10 @@ const styles = StyleSheet.create({
     borderRightColor: "#ddd",
     lineHeight: 1.4,
   },
-  nameCol: { width: "22%" },
+  evaluatorCol: { width: "16%" },
+  assignmentCol: { width: "24%" },
   scoreCol: { width: "10%", textAlign: "center" },
-  commentCol: { width: "68%", borderRightWidth: 0 },
+  commentCol: { width: "50%", borderRightWidth: 0 },
   empty: { padding: 16, color: "#666", textAlign: "center" },
 });
 
@@ -94,8 +95,11 @@ export function IndividualEvaluationsPdfDocument(
 
         <View style={styles.table}>
           <View style={styles.headerRow}>
-            <Text style={[styles.headerCell, styles.nameCol]}>
-              평가대상 학생
+            <Text style={[styles.headerCell, styles.evaluatorCol]}>
+              평가자
+            </Text>
+            <Text style={[styles.headerCell, styles.assignmentCol]}>
+              평가과제
             </Text>
             <Text style={[styles.headerCell, styles.scoreCol]}>
               {COMPLETENESS_LABEL}
@@ -110,11 +114,11 @@ export function IndividualEvaluationsPdfDocument(
           ) : (
             props.rows.map((row, index) => (
               <View key={`row-${index}`} style={styles.row} wrap={false}>
-                <Text style={[styles.cell, styles.nameCol]}>
-                  {row.presenterName}
-                  {row.presenterStudentId
-                    ? ` (${row.presenterStudentId})`
-                    : ""}
+                <Text style={[styles.cell, styles.evaluatorCol]}>
+                  {row.evaluatorName}
+                </Text>
+                <Text style={[styles.cell, styles.assignmentCol]}>
+                  {row.assignmentTitle}
                 </Text>
                 <Text style={[styles.cell, styles.scoreCol]}>
                   {formatCompletenessScore(row.score)}

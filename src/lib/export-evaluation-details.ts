@@ -23,21 +23,28 @@ export function formatPeerEvaluationList(evaluations: PeerEvaluation[]) {
 }
 
 export type IndividualEvaluationRow = {
-  presenterName: string;
-  presenterStudentId: string | null;
+  evaluatorName: string;
+  assignmentTitle: string;
   score: number;
   comment: string;
 };
 
 export function peerEvaluationsToRows(
-  presenterName: string,
-  presenterStudentId: string | null,
+  assignmentTitle: string,
   evaluations: PeerEvaluation[]
 ): IndividualEvaluationRow[] {
   return evaluations.map((evaluation) => ({
-    presenterName,
-    presenterStudentId,
+    evaluatorName: evaluation.evaluator.name,
+    assignmentTitle,
     score: evaluation.empathyScore,
     comment: mergeEvaluationComment(evaluation.reason, evaluation.suggestions),
   }));
+}
+
+export function sortIndividualEvaluationRows(rows: IndividualEvaluationRow[]) {
+  return [...rows].sort((a, b) => {
+    const byEvaluator = a.evaluatorName.localeCompare(b.evaluatorName, "ko");
+    if (byEvaluator !== 0) return byEvaluator;
+    return a.assignmentTitle.localeCompare(b.assignmentTitle, "ko");
+  });
 }
