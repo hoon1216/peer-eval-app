@@ -1,5 +1,4 @@
 import {
-  formatCompletenessScore,
   mergeEvaluationComment,
 } from "@/lib/evaluation-labels";
 
@@ -12,16 +11,6 @@ type PeerEvaluation = PeerEvaluationScore & {
   reason: string;
   suggestions: string;
 };
-
-export function formatPeerEvaluationScoreEntry(evaluation: PeerEvaluationScore) {
-  return `${evaluation.evaluator.name} | ${formatCompletenessScore(evaluation.empathyScore)}`;
-}
-
-export function formatPeerEvaluationScoresList(
-  evaluations: PeerEvaluationScore[]
-) {
-  return evaluations.map(formatPeerEvaluationScoreEntry).join("\n");
-}
 
 export type IndividualEvaluationRow = {
   evaluatorName: string;
