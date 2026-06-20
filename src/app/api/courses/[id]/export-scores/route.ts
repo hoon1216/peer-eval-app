@@ -1,7 +1,7 @@
 import { auth } from "@/lib/auth";
 import { canViewCourseResults, userCanAccessCourse } from "@/lib/permissions";
 import { enrichPresentationsForResults } from "@/lib/course-results";
-import { formatPeerEvaluationList } from "@/lib/export-evaluation-details";
+import { formatPeerEvaluationScoresList } from "@/lib/export-evaluation-details";
 import { submittedEvaluations } from "@/lib/evaluation-filters";
 import { mergeProfessorFieldsBatch } from "@/lib/presentation-professor-fields";
 import { sortPresentationsByPresenterName } from "@/lib/sort-presentations";
@@ -42,8 +42,6 @@ export async function GET(_request: Request, { params }: Params) {
       evaluations: {
         select: {
           empathyScore: true,
-          reason: true,
-          suggestions: true,
           isDraft: true,
           evaluator: { select: { name: true } },
         },
@@ -69,7 +67,7 @@ export async function GET(_request: Request, { params }: Params) {
     "이름",
     "평가 과제",
     "동료평가",
-    "동료평가 내역",
+    "동료평가 점수",
     "참관 교수 평가",
     "담당 교수 평가",
     "평가결과",
@@ -81,14 +79,14 @@ export async function GET(_request: Request, { params }: Params) {
       const submitted = submittedEvaluations(
         sortedPresentations[i].evaluations
       );
-      const peerDetails = formatPeerEvaluationList(submitted);
+      const peerScores = formatPeerEvaluationScoresList(submitted);
       const values = [
         i + 1,
         r.presenter.studentId ?? "",
         r.presenter.name,
         r.title ?? "",
         r.peerAverage ?? "",
-        peerDetails,
+        peerScores,
         r.observerProfessorScore ?? "",
         r.professorScore ?? "",
         r.finalGrade ?? "",
